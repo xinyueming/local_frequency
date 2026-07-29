@@ -17,11 +17,11 @@ def mock_sftp():
 def source_dict():
     return {
         "proj001": {
-            ".filter.xls": ["/data/a/b/c/d/proj001/sample1.filter.xls"],
-            ".cnv.vcf": ["/data/a/b/c/d/proj001/sample1.cnv.vcf"],
+            ".filter.xls": ["/data/a/b/c/d/e/proj001/sample1.filter.xls"],
+            ".cnv.vcf": ["/data/a/b/c/d/e/proj001/sample1.cnv.vcf"],
         },
         "proj002": {
-            ".total.fusion.xls": ["/data/a/b/c/d/proj002/sample2.total.fusion.xls"],
+            ".total.fusion.xls": ["/data/a/b/c/d/e/proj002/sample2.total.fusion.xls"],
         },
     }
 
@@ -75,12 +75,12 @@ class TestFileCopier:
         result = copier.copy_files(source_dict, "/data")
 
         # 该文件应被跳过
-        assert "/data/a/b/c/d/proj001/sample1.filter.xls" not in result
+        assert "/data/a/b/c/d/e/proj001/sample1.filter.xls" not in result
 
     def test_resolve_local_path(self, mock_sftp, tmp_path):
         copier = FileCopier(mock_sftp, str(tmp_path))
         path = copier._resolve_local_path(
-            "/data/a/b/c/d/proj001/sample.filter.xls", "/data", "proj001"
+            "/data/a/b/c/d/e/proj001/sample.filter.xls", "/data", "proj001"
         )
         assert path.endswith(os.path.join("proj001", "data", "sample.filter.xls"))
 

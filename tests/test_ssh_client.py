@@ -148,7 +148,7 @@ class TestGetFilesBySuffix:
         MockSSHClient.return_value = mock_instance
 
         # remote_path = /base
-        # 第 6 层: /base/a/b/c/d/proj123/file.filter.xls
+        # 第 6 层: /base/a/b/c/d/e/proj123/file.filter.xls
         files_flat = [self._make_attr("file.filter.xls", False)]
 
         def walk_side_effect(path):
@@ -161,8 +161,10 @@ class TestGetFilesBySuffix:
             elif path == "/base/a/b/c":
                 return [self._make_attr("d", True)]
             elif path == "/base/a/b/c/d":
+                return [self._make_attr("e", True)]
+            elif path == "/base/a/b/c/d/e":
                 return [self._make_attr("proj123", True)]
-            elif path == "/base/a/b/c/d/proj123":
+            elif path == "/base/a/b/c/d/e/proj123":
                 return files_flat
             return []
 

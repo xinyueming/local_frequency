@@ -53,9 +53,9 @@ class TestEndToEndPipeline:
         # 准备 mock SSH
         mock_ssh = _create_mock_ssh()
         mock_ssh.walk_remote_dir.return_value = [
-            "/data/a/b/c/d/proj001/sample1.hg38_multianno.filter.xls",
-            "/data/a/b/c/d/proj001/sample1.total.fusion.xls",
-            "/data/a/b/c/d/proj001/sample1.tsv.redup.xls",
+            "/data/a/b/c/d/e/proj001/sample1.hg38_multianno.filter.xls",
+            "/data/a/b/c/d/e/proj001/sample1.total.fusion.xls",
+            "/data/a/b/c/d/e/proj001/sample1.tsv.redup.xls",
         ]
         MockClient.return_value = mock_ssh
 
@@ -80,9 +80,9 @@ class TestEndToEndPipeline:
         p = Pipeline(cfg)
         # 手动注入 source_dict（跳过实际 SSH）
         p.source_dict = {"proj001": {
-            ".filter.xls": ["/data/a/b/c/d/proj001/sample1.hg38_multianno.filter.xls"],
-            ".total.fusion.xls": ["/data/a/b/c/d/proj001/sample1.total.fusion.xls"],
-            ".tsv.redup.xls": ["/data/a/b/c/d/proj001/sample1.tsv.redup.xls"],
+            ".filter.xls": ["/data/a/b/c/d/e/proj001/sample1.hg38_multianno.filter.xls"],
+            ".total.fusion.xls": ["/data/a/b/c/d/e/proj001/sample1.total.fusion.xls"],
+            ".tsv.redup.xls": ["/data/a/b/c/d/e/proj001/sample1.tsv.redup.xls"],
         }}
 
         # 执行统计步骤
@@ -98,7 +98,7 @@ class TestEndToEndPipeline:
         """仅收集+拷贝流程"""
         mock_ssh = _create_mock_ssh()
         mock_ssh.walk_remote_dir.return_value = [
-            "/data/a/b/c/d/proj001/sample.filter.xls",
+            "/data/a/b/c/d/e/proj001/sample.filter.xls",
         ]
         MockClient.return_value = mock_ssh
 

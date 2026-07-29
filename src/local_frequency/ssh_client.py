@@ -147,11 +147,11 @@ class SSHClient:
             rel_path = os.path.relpath(fpath, norm_base)
             parts = rel_path.split(os.sep)
 
-            # 第 5 层目录（索引 4）为项目编号:
-            # a/b/c/d/proj123/file.filter.xls → parts[4] = "proj123"
-            if len(parts) < 6:
+            # 第 6 层目录（索引 5）为项目编号:
+            # a/b/c/d/e/proj123/file.filter.xls → parts[5] = "proj123"
+            if len(parts) < 7:
                 continue
-            project_id = parts[4]
+            project_id = parts[5]
 
             # 匹配后缀
             fname = os.path.basename(fpath)

@@ -56,7 +56,7 @@ class TestPipelineCollectOnly:
         mock_instance.__enter__ = MagicMock(return_value=mock_instance)
         mock_instance.__exit__ = MagicMock(return_value=False)
         mock_instance.walk_remote_dir.return_value = [
-            "/data/a/b/c/d/proj001/sample.filter.xls",
+            "/data/a/b/c/d/e/proj001/sample.filter.xls",
         ]
         MockClient.return_value = mock_instance
 
