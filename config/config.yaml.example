@@ -1,0 +1,29 @@
+# 配置文件模板
+# 复制为 config.yaml 并填写实际值
+
+ssh:
+  host: "your-server.example.com"
+  port: 22
+  user: "your_username"
+  # 密钥认证（二选一）
+  key_path: "~/.ssh/id_rsa"
+  # 密码认证
+  # password: "your_password"
+
+# 远程数据目录
+remote:
+  base_path: "/path/to/remote/data"
+
+# 本地存储目录
+local:
+  base_path: "/path/to/local/data"
+
+# 统计配置
+stats:
+  # 并行统计线程数
+  max_workers: 4
+
+# 频率库构建
+db_builder:
+  # 多进程 worker 数
+  processes: 2
