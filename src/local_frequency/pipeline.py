@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
+import shutil
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -176,22 +179,24 @@ class Pipeline:
             logger.warning("无项目可统计")
             return True
 
-        stat_tasks = []
-        for proj_id in projects:
-            proj_dir = str(Path(local_base) / proj_id / "data")
-            out_dir = str(Path(local_base) / proj_id / "mutation_frequency_result")
-            stat_tasks.append((proj_id, proj_dir, out_dir))
+        # 创建日期目录和 latest 目录
+        now_time = time.strftime("%y%m%d", time.localtime())
 
         results = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {}
-            for proj_id, data_dir, out_dir in stat_tasks:
-                # 提交 SNV 统计
-                futures[executor.submit(stat_snv, data_dir, out_dir)] = f"{proj_id}_snv"
+            for proj_id in projects:
+                proj_dir = str(Path(local_base) / proj_id / "data")
+                date_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / now_time)
+                latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
+
+                # 提交 SNV 统计（体细胞 + 胚系）
+                futures[executor.submit(stat_snv, proj_dir, date_dir, proj_id, germline=False)] = f"{proj_id}_snv_somatic"
+                futures[executor.submit(stat_snv, proj_dir, date_dir, proj_id, germline=True)] = f"{proj_id}_snv_germline"
                 # 提交 DNA fusion 统计
-                futures[executor.submit(stat_dnafusion, data_dir, out_dir)] = f"{proj_id}_dnafusion"
+                futures[executor.submit(stat_dnafusion, proj_dir, date_dir, proj_id)] = f"{proj_id}_dnafusion"
                 # 提交 RNA fusion 统计
-                futures[executor.submit(stat_rnafusion, data_dir, out_dir)] = f"{proj_id}_rnafusion"
+                futures[executor.submit(stat_rnafusion, proj_dir, date_dir, proj_id)] = f"{proj_id}_rnafusion"
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="统计中"):
                 task_name = futures[future]
@@ -199,40 +204,83 @@ class Pipeline:
                     result = future.result()
                     results[task_name] = result
                     logger.info("%s: %d 个样本", task_name, result.get("total", 0))
+
+                    # 拷贝结果到 latest 目录
+                    if result.get("output_file"):
+                        os.makedirs(latest_dir, exist_ok=True)
+                        shutil.copy2(result["output_file"], latest_dir)
                 except Exception as e:  # noqa: BLE001 — 并行任务需捕获所有异常
                     logger.error("%s 失败: %s", task_name, e)
                     results[task_name] = {"total": 0, "error": str(e)}
+
+        # 写入 stat.json 并拷贝到 latest
+        for proj_id in projects:
+            date_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / now_time)
+            latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
+
+            # 收集该项目的统计结果
+            proj_stat = {}
+            for task_name, result in results.items():
+                if task_name.startswith(f"{proj_id}_"):
+                    stat_key = task_name[len(f"{proj_id}_"):]
+                    proj_stat[stat_key] = result.get("total", 0)
+
+            if proj_stat:
+                os.makedirs(date_dir, exist_ok=True)
+                stat_path = str(Path(date_dir) / "stat.json")
+                with open(stat_path, "w") as f:
+                    json.dump(proj_stat, f, indent=4)
+
+                # 拷贝到 latest
+                os.makedirs(latest_dir, exist_ok=True)
+                shutil.copy2(stat_path, latest_dir)
 
         logger.info("并行统计完成: %d 个任务", len(results))
         return True
 
     def _step_build_db(self, project_ids: list[str] | None = None) -> bool:
-        """构建频率库"""
+        """构建频率库 — 从 latest 目录读取统计结果"""
         local_base = self.config.local["base_path"]
         processes = self.config.db_builder.get("processes", 2)
 
         projects = project_ids if project_ids else list(self.source_dict.keys())
         for proj_id in projects:
-            input_dir = str(Path(local_base) / proj_id / "mutation_frequency_result")
-            if not os.path.exists(input_dir):
+            latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
+            if not os.path.exists(latest_dir):
                 logger.warning("跳过无统计结果的项目: %s", proj_id)
                 continue
             output_dir = str(Path(local_base) / proj_id / "frequency_db")
-            stat_path = str(Path(input_dir) / "stat.json")
+            stat_path = str(Path(latest_dir) / "stat.json")
 
-            build_frequency_db(input_dir, output_dir, stat_path=stat_path, processes=processes)
+            build_frequency_db(latest_dir, output_dir, stat_path=stat_path, processes=processes)
 
         return True
 
     def _step_cnv(self, project_ids: list[str] | None = None) -> bool:
-        """CNV 统计与索引"""
+        """CNV 统计与索引 — 结果拷贝到 latest 和 frequency_db"""
         local_base = self.config.local["base_path"]
         projects = project_ids if project_ids else list(self.source_dict.keys())
 
         for proj_id in projects:
             cnv_dir = str(Path(local_base) / proj_id / "data")
             out_dir = str(Path(local_base) / proj_id / "mutation_frequency_result")
-            stat_cnv(cnv_dir, out_dir, sample_prefix=proj_id)
+            result = stat_cnv(cnv_dir, out_dir, sample_prefix=proj_id)
+
+            if result.get("output_file"):
+                # 拷贝到 latest
+                latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
+                os.makedirs(latest_dir, exist_ok=True)
+                shutil.copy2(result["output_file"], latest_dir)
+                tbi_file = result["output_file"] + ".tbi"
+                if os.path.exists(tbi_file):
+                    shutil.copy2(tbi_file, latest_dir)
+
+                # 拷贝到 frequency_db（CNV 已经是最终格式，无需转换）
+                freq_db_dir = str(Path(local_base) / proj_id / "frequency_db")
+                os.makedirs(freq_db_dir, exist_ok=True)
+                shutil.copy2(result["output_file"], freq_db_dir)
+                if os.path.exists(tbi_file):
+                    shutil.copy2(tbi_file, freq_db_dir)
 
         return True
 

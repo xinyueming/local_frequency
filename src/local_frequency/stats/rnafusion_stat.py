@@ -38,12 +38,13 @@ def _make_fusion_key(line: dict) -> str:
     return f'{line["gene1_chr"]}:{line["gene1_pos"]}_{line["gene2_chr"]}:{line["gene2_pos"]}'
 
 
-def stat_rnafusion(data_dir: str, output_dir: str) -> dict:
+def stat_rnafusion(data_dir: str, output_dir: str, sample_prefix: str) -> dict:
     """执行 RNA Fusion 频率统计
 
     Args:
         data_dir: 输入文件所在目录
         output_dir: 输出目录
+        sample_prefix: 项目编号
 
     Returns:
         {"total": 样本数, "output_file": 输出路径}
@@ -93,7 +94,7 @@ def stat_rnafusion(data_dir: str, output_dir: str) -> dict:
     total = len(files)
 
     os.makedirs(output_dir, exist_ok=True)
-    out_file = os.path.join(output_dir, "mutation_frequency.xls")
+    out_file = os.path.join(output_dir, f"{sample_prefix}_rnafusion.mutation_frequency.xls")
 
     with open(out_file, "w", encoding="utf-8") as f_out:
         f_out.write("\t".join(header) + "\n")

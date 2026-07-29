@@ -133,7 +133,13 @@ class TestBuildFrequencyDb:
         assert results == []
 
     def test_filename_mapping_complete(self):
-        # 确保所有常用模式都有映射
-        assert "84" in FILENAME_TO_KEY.values()
-        assert "624" in FILENAME_TO_KEY.values()
-        assert "wes" in FILENAME_TO_KEY.values()
+        from local_frequency.db_builder import OLD_FILENAME_TO_KEY
+        # 新格式映射
+        assert "snv_somatic" in FILENAME_TO_KEY
+        assert "snv_germline" in FILENAME_TO_KEY
+        assert "dnafusion" in FILENAME_TO_KEY
+        assert "rnafusion" in FILENAME_TO_KEY
+        # 兼容旧格式
+        assert "84" in OLD_FILENAME_TO_KEY.values()
+        assert "624" in OLD_FILENAME_TO_KEY.values()
+        assert "wes" in OLD_FILENAME_TO_KEY.values()

@@ -14,8 +14,17 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# 文件名 → stat.json key 映射
+# 文件名 → (stat.json key, 样本类型) 映射
+# 新格式: {proj_id}_{type}.mutation_frequency.xls
 FILENAME_TO_KEY = {
+    "snv_somatic": "snv_somatic",
+    "snv_germline": "snv_germline",
+    "dnafusion": "dnafusion",
+    "rnafusion": "rnafusion",
+}
+
+# 兼容旧格式
+OLD_FILENAME_TO_KEY = {
     "120.mutation_frequency.xls": "120",
     "120.mutation_frequency_germline.xls": "120_germline",
     "180.mutation_frequency.xls": "180",
@@ -268,7 +277,18 @@ def build_frequency_db(
     for fn in os.listdir(input_dir):
         if not fn.endswith(".xls"):
             continue
-        key = FILENAME_TO_KEY.get(fn)
+
+        # 新格式: {proj_id}_{type}.mutation_frequency.xls
+        key = None
+        for type_key in FILENAME_TO_KEY:
+            if f"_{type_key}.mutation_frequency.xls" in fn:
+                key = type_key
+                break
+
+        # 兼容旧格式
+        if not key:
+            key = OLD_FILENAME_TO_KEY.get(fn)
+
         if not key:
             logger.warning("未知文件，跳过: %s", fn)
             continue

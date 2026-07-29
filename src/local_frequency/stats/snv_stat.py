@@ -67,12 +67,13 @@ def _extract_cdna_info(line: dict) -> str:
     return f"{chrom}_{pos}_{ref}_{alt}"
 
 
-def stat_snv(data_dir: str, output_dir: str, germline: bool = False) -> dict:
+def stat_snv(data_dir: str, output_dir: str, sample_prefix: str, germline: bool = False) -> dict:
     """执行 SNV 频率统计
 
     Args:
         data_dir: 输入文件所在目录（递归搜索）
         output_dir: 输出目录
+        sample_prefix: 项目编号（如 84）
         germline: 是否统计胚系变异
 
     Returns:
@@ -129,7 +130,8 @@ def stat_snv(data_dir: str, output_dir: str, germline: bool = False) -> dict:
     total = len(files)
 
     os.makedirs(output_dir, exist_ok=True)
-    out_file = os.path.join(output_dir, "mutation_frequency.xls")
+    suffix = "snv_germline" if germline else "snv_somatic"
+    out_file = os.path.join(output_dir, f"{sample_prefix}_{suffix}.mutation_frequency.xls")
 
     with open(out_file, "w", encoding="utf-8") as f_out:
         f_out.write("\t".join(header) + "\n")

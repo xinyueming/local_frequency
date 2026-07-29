@@ -98,11 +98,12 @@ def rna_fusion_data_dir(tmp_path):
 class TestStatSNV:
     def test_stat_snv_basic(self, snv_data_dir, tmp_path):
         out_dir = str(tmp_path / "out")
-        result = stat_snv(snv_data_dir, out_dir)
+        result = stat_snv(snv_data_dir, out_dir, sample_prefix="84")
 
         assert result["total"] == 2
         assert result["output_file"]
         assert os.path.exists(result["output_file"])
+        assert "84_snv_somatic" in result["output_file"]
 
         # 检查输出内容
         with open(result["output_file"]) as f:
@@ -114,7 +115,7 @@ class TestStatSNV:
     def test_stat_snv_no_files(self, tmp_path):
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
-        result = stat_snv(str(empty_dir), str(tmp_path / "out"))
+        result = stat_snv(str(empty_dir), str(tmp_path / "out"), sample_prefix="84")
         assert result["total"] == 0
         assert result["output_file"] == ""
 
@@ -122,11 +123,12 @@ class TestStatSNV:
 class TestStatDnaFusion:
     def test_stat_dnafusion_basic(self, fusion_data_dir, tmp_path):
         out_dir = str(tmp_path / "out")
-        result = stat_dnafusion(fusion_data_dir, out_dir)
+        result = stat_dnafusion(fusion_data_dir, out_dir, sample_prefix="84")
 
         assert result["total"] == 2
         assert result["output_file"]
         assert os.path.exists(result["output_file"])
+        assert "84_dnafusion" in result["output_file"]
 
         with open(result["output_file"]) as f:
             lines = f.readlines()
@@ -135,21 +137,22 @@ class TestStatDnaFusion:
     def test_stat_dnafusion_no_files(self, tmp_path):
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
-        result = stat_dnafusion(str(empty_dir), str(tmp_path / "out"))
+        result = stat_dnafusion(str(empty_dir), str(tmp_path / "out"), sample_prefix="84")
         assert result["total"] == 0
 
 
 class TestStatRnaFusion:
     def test_stat_rnafusion_basic(self, rna_fusion_data_dir, tmp_path):
         out_dir = str(tmp_path / "out")
-        result = stat_rnafusion(rna_fusion_data_dir, out_dir)
+        result = stat_rnafusion(rna_fusion_data_dir, out_dir, sample_prefix="84")
 
         assert result["total"] == 1
         assert result["output_file"]
         assert os.path.exists(result["output_file"])
+        assert "84_rnafusion" in result["output_file"]
 
     def test_stat_rnafusion_no_files(self, tmp_path):
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
-        result = stat_rnafusion(str(empty_dir), str(tmp_path / "out"))
+        result = stat_rnafusion(str(empty_dir), str(tmp_path / "out"), sample_prefix="84")
         assert result["total"] == 0

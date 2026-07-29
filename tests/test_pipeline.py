@@ -61,13 +61,6 @@ class TestPipelineCollectOnly:
         MockClient.return_value = mock_instance
 
         p = Pipeline(pipeline_config)
-        # 模拟 collect_only: 只执行前两步
-        # 但我们的 run(collect_only=True) 只执行 step 1 和 2
-        # step 2 需要 sftp，mock 它
-        mock_instance.sftp = MagicMock()
-
-        # 由于 collect_only=True 只做收集+拷贝，
-        # 而拷贝会因无实际连接失败，我们测试 step_collect 单独调用
         result = p._step_collect()
         assert result is True
         assert "proj001" in p.source_dict
@@ -77,16 +70,19 @@ class TestPipelineParallelStats:
     @patch("local_frequency.pipeline.stat_snv")
     @patch("local_frequency.pipeline.stat_dnafusion")
     @patch("local_frequency.pipeline.stat_rnafusion")
-    def test_parallel_stats(self, mock_rna, mock_dna, mock_snv, pipeline_config):
-        mock_snv.return_value = {"total": 5}
-        mock_dna.return_value = {"total": 3}
-        mock_rna.return_value = {"total": 2}
+    def test_parallel_stats(self, mock_rna, mock_dna, mock_snv, pipeline_config, tmp_path):
+        mock_snv.return_value = {"total": 5, "output_file": ""}
+        mock_dna.return_value = {"total": 3, "output_file": ""}
+        mock_rna.return_value = {"total": 2, "output_file": ""}
+
+        # 设置本地路径到 tmp
+        pipeline_config.local["base_path"] = str(tmp_path)
 
         p = Pipeline(pipeline_config)
         p.source_dict = {"proj001": {".filter.xls": ["/x"]}}
         result = p._step_parallel_stats(project_ids=["proj001"])
         assert result is True
-        assert mock_snv.call_count == 1
+        assert mock_snv.call_count == 2  # somatic + germline
         assert mock_dna.call_count == 1
         assert mock_rna.call_count == 1
 
@@ -94,12 +90,10 @@ class TestPipelineParallelStats:
 class TestPipelineBuildDb:
     @patch("local_frequency.pipeline.build_frequency_db")
     def test_build_db(self, mock_build, pipeline_config, tmp_path):
-        # 创建 mutation_frequency_result 目录（否则被跳过）
-        result_dir = tmp_path / "proj001" / "mutation_frequency_result"
-        result_dir.mkdir(parents=True)
-        (result_dir / "stat.json").write_text("{}")
+        # 创建 latest 目录
+        latest_dir = tmp_path / "proj001" / "mutation_frequency_result" / "latest"
+        latest_dir.mkdir(parents=True)
 
-        # 更新 local base_path
         pipeline_config.local["base_path"] = str(tmp_path)
 
         p = Pipeline(pipeline_config)
@@ -111,8 +105,10 @@ class TestPipelineBuildDb:
 
 class TestPipelineCnv:
     @patch("local_frequency.pipeline.stat_cnv")
-    def test_cnv_step(self, mock_cnv, pipeline_config):
-        mock_cnv.return_value = {"total": 1, "output_file": "/out.gz"}
+    def test_cnv_step(self, mock_cnv, pipeline_config, tmp_path):
+        mock_cnv.return_value = {"total": 1, "output_file": ""}
+
+        pipeline_config.local["base_path"] = str(tmp_path)
 
         p = Pipeline(pipeline_config)
         p.source_dict = {"proj001": {".cnv.vcf": ["/x"]}}
