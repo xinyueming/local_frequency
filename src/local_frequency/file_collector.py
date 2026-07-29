@@ -26,7 +26,7 @@ class FileCollector:
         self,
         base_path: str,
         suffixes: list[str] | None = None,
-        project_level: int = 5,
+        project_level: int = 2,
     ):
         """
         Args:

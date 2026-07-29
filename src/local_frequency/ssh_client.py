@@ -147,11 +147,12 @@ class SSHClient:
             rel_path = os.path.relpath(fpath, norm_base)
             parts = rel_path.split(os.sep)
 
-            # 第 6 层目录（索引 5）为项目编号:
-            # a/b/c/d/e/proj123/file.filter.xls → parts[5] = "proj123"
-            if len(parts) < 7:
+            # 从 remote.base_path 开始算，第 3 层（索引 2）为项目编号:
+            # easy-gene-collection/20260729/ZLTZ2026010518/J13008I0000V/1785270363/file.cnv.vcf
+            # → parts[2] = "ZLTZ2026010518"
+            if len(parts) < 4:
                 continue
-            project_id = parts[5]
+            project_id = parts[2]
 
             # 匹配后缀
             fname = os.path.basename(fpath)

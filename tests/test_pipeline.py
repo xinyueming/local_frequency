@@ -56,7 +56,7 @@ class TestPipelineCollectOnly:
         mock_instance.__enter__ = MagicMock(return_value=mock_instance)
         mock_instance.__exit__ = MagicMock(return_value=False)
         mock_instance.walk_remote_dir.return_value = [
-            "/data/a/b/c/d/e/proj001/sample.filter.xls",
+            "/data/a/b/proj001/sample.filter.xls",
         ]
         MockClient.return_value = mock_instance
 
@@ -93,7 +93,15 @@ class TestPipelineParallelStats:
 
 class TestPipelineBuildDb:
     @patch("local_frequency.pipeline.build_frequency_db")
-    def test_build_db(self, mock_build, pipeline_config):
+    def test_build_db(self, mock_build, pipeline_config, tmp_path):
+        # 创建 mutation_frequency_result 目录（否则被跳过）
+        result_dir = tmp_path / "proj001" / "mutation_frequency_result"
+        result_dir.mkdir(parents=True)
+        (result_dir / "stat.json").write_text("{}")
+
+        # 更新 local base_path
+        pipeline_config.local["base_path"] = str(tmp_path)
+
         p = Pipeline(pipeline_config)
         p.source_dict = {"proj001": {".filter.xls": ["/x"]}}
         result = p._step_build_db(project_ids=["proj001"])

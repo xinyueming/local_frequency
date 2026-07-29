@@ -8,8 +8,8 @@ class TestFileCollector:
     def test_classify_snv_files(self):
         collector = FileCollector(base_path="/data")
         files = [
-            "/data/a/b/c/d/e/proj001/sample.filter.xls",
-            "/data/a/b/c/d/e/proj001/sample.filter.germline.xls",
+            "/data/a/b/proj001/sample.filter.xls",
+            "/data/a/b/proj001/sample.filter.germline.xls",
         ]
         result = collector.classify_files(files)
 
@@ -20,8 +20,8 @@ class TestFileCollector:
     def test_classify_fusion_files(self):
         collector = FileCollector(base_path="/data")
         files = [
-            "/data/a/b/c/d/e/proj002/sample.total.fusion.xls",
-            "/data/a/b/c/d/e/proj002/sample.tsv.redup.xls",
+            "/data/a/b/proj002/sample.total.fusion.xls",
+            "/data/a/b/proj002/sample.tsv.redup.xls",
         ]
         result = collector.classify_files(files)
 
@@ -31,7 +31,7 @@ class TestFileCollector:
 
     def test_classify_cnv_files(self):
         collector = FileCollector(base_path="/data")
-        files = ["/data/a/b/c/d/e/proj003/sample.cnv.vcf"]
+        files = ["/data/a/b/proj003/sample.cnv.vcf"]
         result = collector.classify_files(files)
 
         assert "proj003" in result
@@ -40,8 +40,8 @@ class TestFileCollector:
     def test_classify_multiple_projects(self):
         collector = FileCollector(base_path="/data")
         files = [
-            "/data/a/b/c/d/e/proj001/sample.filter.xls",
-            "/data/a/b/c/d/e/proj002/sample.filter.xls",
+            "/data/a/b/proj001/sample.filter.xls",
+            "/data/a/b/proj002/sample.filter.xls",
         ]
         result = collector.classify_files(files)
 
@@ -51,22 +51,22 @@ class TestFileCollector:
 
     def test_skip_short_paths(self):
         collector = FileCollector(base_path="/data")
-        # 相对路径: a/b （不足 project_level=5 层）
-        files = ["/data/a/b/sample.filter.xls"]
+        # 相对路径: a/sample.filter.xls （不足 project_level=2 层）
+        files = ["/data/a/sample.filter.xls"]
         result = collector.classify_files(files)
         assert result == {}
 
     def test_unknown_suffix_ignored(self):
         collector = FileCollector(base_path="/data")
-        files = ["/data/a/b/c/d/e/proj001/readme.txt"]
+        files = ["/data/a/b/proj001/readme.txt"]
         result = collector.classify_files(files)
         assert result == {}
 
     def test_custom_suffixes(self):
         collector = FileCollector(base_path="/data", suffixes=[".bam", ".bai"])
         files = [
-            "/data/a/b/c/d/e/proj001/sample.bam",
-            "/data/a/b/c/d/e/proj001/sample.bai",
+            "/data/a/b/proj001/sample.bam",
+            "/data/a/b/proj001/sample.bai",
         ]
         result = collector.classify_files(files)
         assert "proj001" in result
@@ -76,7 +76,7 @@ class TestFileCollector:
         """更具体的后缀优先匹配"""
         collector = FileCollector(base_path="/data")
         files = [
-            "/data/a/b/c/d/e/proj001/sample.filter.germline.xls",
+            "/data/a/b/proj001/sample.filter.germline.xls",
         ]
         result = collector.classify_files(files)
         # 应该匹配 .filter.germline.xls 而不是 .filter.xls
