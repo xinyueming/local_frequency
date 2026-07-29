@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import shlex
+import shutil
 import subprocess
 
 logger = logging.getLogger(__name__)
@@ -181,6 +182,10 @@ def _compress_and_index(txt_path: str) -> str:
     Returns:
         .gz 文件路径
     """
+    # 优先使用 conda 路径，回退到 PATH
+    bgzip_bin = shutil.which("bgzip") or os.path.expanduser("~/miniconda3/bin/bgzip")
+    tabix_bin = shutil.which("tabix") or os.path.expanduser("~/miniconda3/bin/tabix")
+
     sorted_path = txt_path + ".sorted"
     gz_path = txt_path + ".gz" if not txt_path.endswith(".gz") else txt_path
 
@@ -191,10 +196,10 @@ def _compress_and_index(txt_path: str) -> str:
         )
         subprocess.run(sort_cmd, shell=True, check=True)
 
-        bgzip_cmd = f"bgzip -c {shlex.quote(sorted_path)} > {shlex.quote(gz_path)}"
+        bgzip_cmd = f"{shlex.quote(bgzip_bin)} -c {shlex.quote(sorted_path)} > {shlex.quote(gz_path)}"
         subprocess.run(bgzip_cmd, shell=True, check=True)
 
-        subprocess.run(["tabix", "-s", "1", "-b", "2", "-e", "3", "-S", "1", gz_path], check=True)
+        subprocess.run([tabix_bin, "-s", "1", "-b", "2", "-e", "3", "-S", "1", gz_path], check=True)
 
         # 清理临时文件
         try:
