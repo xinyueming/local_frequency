@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -213,6 +214,9 @@ class Pipeline:
         projects = project_ids if project_ids else list(self.source_dict.keys())
         for proj_id in projects:
             input_dir = str(Path(local_base) / proj_id / "mutation_frequency_result")
+            if not os.path.exists(input_dir):
+                logger.warning("跳过无统计结果的项目: %s", proj_id)
+                continue
             output_dir = str(Path(local_base) / proj_id / "frequency_db")
             stat_path = str(Path(input_dir) / "stat.json")
 
