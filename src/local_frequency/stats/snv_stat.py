@@ -23,8 +23,8 @@ def read_filter_files(sour_path: str, germline: bool = False) -> list[str]:
         匹配文件路径列表
     """
     files = []
-    pattern = re.compile(r".*hg38_multianno\.filter.*germline.*") if germline else re.compile(
-        r".*hg38_multianno\.filter(?!.*germline).*"
+    pattern = re.compile(r".*hg(19|38)_multianno\.filter.*germline.*") if germline else re.compile(
+        r".*hg(19|38)_multianno\.filter(?!.*germline).*"
     )
 
     for root, _dirs, filenames in os.walk(sour_path):
