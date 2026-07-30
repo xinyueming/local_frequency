@@ -188,18 +188,19 @@ class Pipeline:
             for proj_id in projects:
                 proj_dir = str(Path(local_base) / proj_id / "data")
                 date_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / now_time)
-                latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
 
                 # 提交 SNV 统计（体细胞 + 胚系）
-                futures[executor.submit(stat_snv, proj_dir, date_dir, proj_id, germline=False)] = f"{proj_id}_snv_somatic"
-                futures[executor.submit(stat_snv, proj_dir, date_dir, proj_id, germline=True)] = f"{proj_id}_snv_germline"
+                futures[executor.submit(stat_snv, proj_dir, date_dir, proj_id, germline=False)] = (proj_id, "snv_somatic")
+                futures[executor.submit(stat_snv, proj_dir, date_dir, proj_id, germline=True)] = (proj_id, "snv_germline")
                 # 提交 DNA fusion 统计
-                futures[executor.submit(stat_dnafusion, proj_dir, date_dir, proj_id)] = f"{proj_id}_dnafusion"
+                futures[executor.submit(stat_dnafusion, proj_dir, date_dir, proj_id)] = (proj_id, "dnafusion")
                 # 提交 RNA fusion 统计
-                futures[executor.submit(stat_rnafusion, proj_dir, date_dir, proj_id)] = f"{proj_id}_rnafusion"
+                futures[executor.submit(stat_rnafusion, proj_dir, date_dir, proj_id)] = (proj_id, "rnafusion")
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="统计中"):
-                task_name = futures[future]
+                proj_id, stat_type = futures[future]
+                task_name = f"{proj_id}_{stat_type}"
+                latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
                 try:
                     result = future.result()
                     results[task_name] = result
