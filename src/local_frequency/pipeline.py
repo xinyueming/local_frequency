@@ -60,6 +60,7 @@ class Pipeline:
         self,
         dry_run: bool = False,
         collect_only: bool = False,
+        local_only: bool = False,
         project_ids: list[str] | None = None,
     ) -> bool:
         """执行完整流程
@@ -67,6 +68,7 @@ class Pipeline:
         Args:
             dry_run: 仅预检查，不执行实际操作
             collect_only: 仅收集文件，不统计
+            local_only: 跳过 SSH 收集，直接使用本地已有 data 目录
             project_ids: 指定项目 ID 过滤
 
         Returns:
@@ -75,13 +77,21 @@ class Pipeline:
         if dry_run:
             return self._dry_run()
 
-        steps = [
-            ("步骤 1/5: SSH 连接与文件收集", self._step_collect),
-            ("步骤 2/5: SFTP 拷贝文件", self._step_copy),
-            ("步骤 3/5: 并行突变统计", self._step_parallel_stats),
-            ("步骤 4/5: 构建频率库", self._step_build_db),
-            ("步骤 5/5: CNV 统计与索引", self._step_cnv),
-        ]
+        if local_only:
+            steps = [
+                ("步骤 1/3: 发现本地项目", self._step_discover_local_projects),
+                ("步骤 2/3: 并行突变统计", self._step_parallel_stats),
+                ("步骤 3/3: 构建频率库", self._step_build_db),
+                ("CNV 统计与索引", self._step_cnv),
+            ]
+        else:
+            steps = [
+                ("步骤 1/5: SSH 连接与文件收集", self._step_collect),
+                ("步骤 2/5: SFTP 拷贝文件", self._step_copy),
+                ("步骤 3/5: 并行突变统计", self._step_parallel_stats),
+                ("步骤 4/5: 构建频率库", self._step_build_db),
+                ("步骤 5/5: CNV 统计与索引", self._step_cnv),
+            ]
 
         if collect_only:
             steps = steps[:2]
@@ -121,6 +131,32 @@ class Pipeline:
         logger.info("本地目录: %s", self.config.local["base_path"])
         logger.info("最大并行: %d", self.config.stats.get("max_workers", 4))
         logger.info("Dry-Run 检查通过")
+        return True
+
+    def _step_discover_local_projects(self, project_ids: list[str] | None = None) -> bool:
+        """从本地目录发现项目（替代 SSH 收集）
+
+        扫描本地 base_path 下存在 data 子目录的项目编号。
+        """
+        local_base = self.config.local["base_path"]
+        if not os.path.isdir(local_base):
+            logger.error("本地目录不存在: %s", local_base)
+            return False
+
+        for name in sorted(os.listdir(local_base)):
+            proj_data = str(Path(local_base) / name / "data")
+            if os.path.isdir(proj_data):
+                self.source_dict[name] = {}
+
+        if project_ids:
+            self.source_dict = {k: v for k, v in self.source_dict.items() if k in project_ids}
+
+        if not self.source_dict:
+            logger.warning("本地目录未找到项目: %s", local_base)
+            return False
+
+        n_projects = len(self.source_dict)
+        logger.info("发现本地项目: %d 个 (%s)", n_projects, ", ".join(sorted(self.source_dict.keys())))
         return True
 
     def _step_collect(self, project_ids: list[str] | None = None) -> bool:
@@ -311,6 +347,7 @@ def main():
     parser.add_argument("--config", required=True, help="配置文件路径")
     parser.add_argument("--dry-run", action="store_true", help="预检查模式")
     parser.add_argument("--collect-only", action="store_true", help="仅收集文件")
+    parser.add_argument("--local-only", action="store_true", help="跳过 SSH 收集，直接使用本地已有 data 目录")
     parser.add_argument("--project", nargs="+", help="指定项目 ID 列表")
 
     args = parser.parse_args()
@@ -324,6 +361,7 @@ def main():
     success = pipeline.run(
         dry_run=args.dry_run,
         collect_only=args.collect_only,
+        local_only=args.local_only,
         project_ids=args.project,
     )
 
