@@ -116,25 +116,33 @@ def _records_to_df(records: dict, total_files: int) -> list[dict]:
     return df.to_dict(orient="records")
 
 
-def stat_cnv(data_dir: str, output_dir: str, sample_prefix: str | None = None) -> dict:
+def stat_cnv(
+    data_dir: str,
+    output_dir: str,
+    sample_prefix: str | None = None,
+    vcf_files: list[str] | None = None,
+) -> dict:
     """执行 CNV 频率统计
 
     Args:
         data_dir: 输入 VCF 文件所在目录
         output_dir: 输出目录
         sample_prefix: 样本前缀，用于生成 local_freq.<prefix>.cnv.txt.gz
+        vcf_files: 指定要处理的文件列表（None 时自动扫描目录下所有 .cnv.vcf）
 
     Returns:
         {"total": 样本数, "output_file": 输出路径（.gz 文件）}
     """
     # 查找 VCF 文件
-    file_list = []
-    if os.path.isdir(data_dir):
+    if vcf_files is not None:
+        file_list = [f for f in vcf_files if os.path.exists(f)]
+    elif os.path.isdir(data_dir):
+        file_list = []
         for fn in os.listdir(data_dir):
             if fn.endswith((".vcf", ".vcf.gz", ".vcf.bgz")):
                 file_list.append(os.path.join(data_dir, fn))
     else:
-        file_list.append(data_dir)
+        file_list = [data_dir] if os.path.exists(data_dir) else []
 
     file_list = [f for f in file_list if os.path.exists(f)]
     if not file_list:

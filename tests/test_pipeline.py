@@ -108,10 +108,36 @@ class TestPipelineCnv:
     def test_cnv_step(self, mock_cnv, pipeline_config, tmp_path):
         mock_cnv.return_value = {"total": 1, "output_file": ""}
 
+        # 创建 data 目录和 backbone CNV 文件
+        data_dir = tmp_path / "proj001" / "data"
+        data_dir.mkdir(parents=True)
+        (data_dir / "sample1.backbone.cnv.vcf").touch()
+        (data_dir / "sample2.panel.cnv.vcf").touch()
+
         pipeline_config.local["base_path"] = str(tmp_path)
 
         p = Pipeline(pipeline_config)
         p.source_dict = {"proj001": {".cnv.vcf": ["/x"]}}
         result = p._step_cnv(project_ids=["proj001"])
         assert result is True
-        mock_cnv.assert_called_once()
+        assert mock_cnv.call_count == 2  # backbone + panel
+
+    @patch("local_frequency.pipeline.stat_cnv")
+    def test_cnv_step_backbone_only(self, mock_cnv, pipeline_config, tmp_path):
+        mock_cnv.return_value = {"total": 1, "output_file": ""}
+
+        data_dir = tmp_path / "proj002" / "data"
+        data_dir.mkdir(parents=True)
+        (data_dir / "sample.backbone.cnv.vcf").touch()
+
+        pipeline_config.local["base_path"] = str(tmp_path)
+
+        p = Pipeline(pipeline_config)
+        p.source_dict = {"proj002": {".cnv.vcf": ["/x"]}}
+        result = p._step_cnv(project_ids=["proj002"])
+        assert result is True
+        assert mock_cnv.call_count == 1
+        args, kwargs = mock_cnv.call_args
+        assert kwargs["sample_prefix"] == "proj002.backbone"
+        assert len(kwargs["vcf_files"]) == 1
+        assert "backbone.cnv.vcf" in kwargs["vcf_files"][0]

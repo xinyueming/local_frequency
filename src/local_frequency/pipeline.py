@@ -51,6 +51,7 @@ class Pipeline:
     SNV_SUFFIXES: ClassVar[list[str]] = [".filter.xls", ".filter.germline.xls"]
     FUSION_SUFFIXES: ClassVar[list[str]] = [".total.fusion.xls", ".tsv.redup.xls"]
     CNV_SUFFIXES: ClassVar[list[str]] = [".cnv.vcf"]
+    CNV_TYPES: ClassVar[list[str]] = ["backbone", "panel"]
 
     def __init__(self, config: PipelineConfig):
         self.config = config
@@ -294,30 +295,44 @@ class Pipeline:
         return True
 
     def _step_cnv(self, project_ids: list[str] | None = None) -> bool:
-        """CNV 统计与索引 — 结果拷贝到 latest 和 frequency_db"""
+        """CNV 统计与索引 — 按 backbone/panel 分类，结果拷贝到 latest 和 frequency_db"""
         local_base = self.config.local["base_path"]
         projects = project_ids if project_ids else list(self.source_dict.keys())
 
         for proj_id in projects:
             cnv_dir = str(Path(local_base) / proj_id / "data")
             out_dir = str(Path(local_base) / proj_id / "mutation_frequency_result")
-            result = stat_cnv(cnv_dir, out_dir, sample_prefix=proj_id)
 
-            if result.get("output_file"):
-                # 拷贝到 latest
-                latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
-                os.makedirs(latest_dir, exist_ok=True)
-                shutil.copy2(result["output_file"], latest_dir)
-                tbi_file = result["output_file"] + ".tbi"
-                if os.path.exists(tbi_file):
-                    shutil.copy2(tbi_file, latest_dir)
+            for cnv_type in self.CNV_TYPES:
+                # 查找该类型的文件
+                vcf_files = [
+                    str(f) for f in Path(cnv_dir).glob("*.cnv.vcf")
+                    if f".{cnv_type}.cnv.vcf" in str(f)
+                ]
+                if not vcf_files:
+                    continue
 
-                # 拷贝到 frequency_db（CNV 已经是最终格式，无需转换）
-                freq_db_dir = str(Path(local_base) / proj_id / "frequency_db")
-                os.makedirs(freq_db_dir, exist_ok=True)
-                shutil.copy2(result["output_file"], freq_db_dir)
-                if os.path.exists(tbi_file):
-                    shutil.copy2(tbi_file, freq_db_dir)
+                result = stat_cnv(
+                    cnv_dir, out_dir,
+                    sample_prefix=f"{proj_id}.{cnv_type}",
+                    vcf_files=vcf_files,
+                )
+
+                if result.get("output_file"):
+                    # 拷贝到 latest
+                    latest_dir = str(Path(local_base) / proj_id / "mutation_frequency_result" / "latest")
+                    os.makedirs(latest_dir, exist_ok=True)
+                    shutil.copy2(result["output_file"], latest_dir)
+                    tbi_file = result["output_file"] + ".tbi"
+                    if os.path.exists(tbi_file):
+                        shutil.copy2(tbi_file, latest_dir)
+
+                    # 拷贝到 frequency_db
+                    freq_db_dir = str(Path(local_base) / proj_id / "frequency_db")
+                    os.makedirs(freq_db_dir, exist_ok=True)
+                    shutil.copy2(result["output_file"], freq_db_dir)
+                    if os.path.exists(tbi_file):
+                        shutil.copy2(tbi_file, freq_db_dir)
 
         return True
 
