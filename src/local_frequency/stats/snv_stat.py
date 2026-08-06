@@ -138,7 +138,7 @@ def stat_snv(data_dir: str, output_dir: str, sample_prefix: str, germline: bool 
         for k, v in counter:
             pop = int(v)
             mut_freq = round(pop / total, 4)
-            f_out.write("\t".join(di[k]) + f"\t{k}\t{pop}\t{mut_freq}\t{','.join(taf[k])}\n")
+            f_out.write("\t".join(di[k]) + f"\t{pop}\t{mut_freq}\t{','.join(taf[k])}\n")
 
     logger.info("SNV 统计完成: %d 个样本 → %s", total, out_file)
     return {"total": total, "output_file": out_file}
